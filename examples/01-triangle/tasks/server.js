@@ -9,13 +9,12 @@ const createServer = (port) => {
 	  live: true,             // live reload
 	  stream: process.stdout, // log to stdout
 	  port: port,             // use this as the base port
-	  dir: 'dev',
 	  browserify: {
 	    transform: babelify   // use ES6
 	  }
 	}).on('connect', function(ev) {
 	  //...
-	  console.log('Server UP');
+	  console.log(`Server UP at ${port}`);
 	})	
 };
 
