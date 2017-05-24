@@ -3,10 +3,10 @@
 ### Basics
 1. 101 : Triangle
 2. Vertices with Colors : Attributes
-3. Varying 
-4. Uniforms
-5. Camera and Matrices
-6. Camera control
+3. Uniforms
+4. Camera and Matrices
+5. Camera control
+6. Shader Basic
 7. Texture
 8. Framebuffer
 9. Basic Lighting
