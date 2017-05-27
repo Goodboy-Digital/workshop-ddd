@@ -5,7 +5,7 @@ const babelify = require('babelify');
 const getNextPort = require('get-next-port');
 
 const createServer = (port) => {
-	budo('./index.js', {
+	budo('./src/index.js', {
 	  live: true,             // live reload
 	  stream: process.stdout, // log to stdout
 	  port: port,             // use this as the base port
