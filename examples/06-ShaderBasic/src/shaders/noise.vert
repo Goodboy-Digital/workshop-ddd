@@ -79,10 +79,10 @@ float snoise(float x, float y, float z){
 void main() {
 
 	vec3 relative = aVertexPosition - aCenter;
-	float posOffset = 0.25;
+	float posOffset = 0.5;
 	float offset = snoise(aCenter * posOffset + time) * .5 + .5;
 	offset = smoothstep(0.0, 0.8, offset);
-	vec3 position = aCenter + relative * offset;
+	vec3 position = aCenter * (1.2 - offset * 0.2) + relative * offset;
 
 	gl_Position = proj * view * vec4(position, 1.0);
 

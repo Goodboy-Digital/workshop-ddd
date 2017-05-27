@@ -1,7 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { mat4, vec3 } from 'gl-matrix';
 import OrbitalCameraControl from './OrbitalCameraControl';
-import SphereData from './sphere';
 
 //	initialize pixi
 const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
@@ -14,35 +13,30 @@ document.body.addEventListener('resize', resize);
 const stage = new PIXI.Stage();
 
 //	geometry
-let centers = [];
-const { positions, normals, indices } = SphereData;
-let p0, p1, p2;
-for(let i=0; i<positions.length; i += 9) {
-	p0 = [positions[i+0], positions[i+1], positions[i+2]];
-	p1 = [positions[i+3], positions[i+4], positions[i+5]];
-	p2 = [positions[i+6], positions[i+7], positions[i+8]];
+let positions = [];
+let uvs = [];
+let indices = [0, 1, 2, 0, 2, 3];
 
-	let cx = (p0[0] + p1[0] + p2[0]) / 3;
-	let cy = (p0[1] + p1[1] + p2[1]) / 3;
-	let cz = (p0[2] + p1[2] + p2[2]) / 3;
+const size = 2;
+positions = positions.concat([-size, size, 0]);
+positions = positions.concat([ size, size, 0]);
+positions = positions.concat([ size,-size, 0]);
+positions = positions.concat([-size,-size, 0]);
 
-	centers = centers.concat([cx, cy, cz]);
-	centers = centers.concat([cx, cy, cz]);
-	centers = centers.concat([cx, cy, cz]);
-}
-
-
+uvs = uvs.concat([0, 0]);
+uvs = uvs.concat([1, 0]);
+uvs = uvs.concat([1, 1]);
+uvs = uvs.concat([0, 1]);
 
 const geometry = 	new PIXI.mesh.Geometry()
 					.addAttribute('aVertexPosition', positions, 3)
-					.addAttribute('aNormal', normals, 3)
-					.addAttribute('aCenter', centers, 3)
+					.addAttribute('aUV', uvs, 2)
 					.addIndex(indices);
 
 //	camera
 //	1. view matrix
 const view = mat4.create();
-const cameraControl = new OrbitalCameraControl(view, 5);
+const cameraControl = new OrbitalCameraControl(view, 15);
 
 //	2. projection matrix
 const proj = mat4.create();
@@ -50,19 +44,23 @@ const rad = Math.PI/180;
 const ratio = window.innerWidth / window.innerHeight;
 mat4.perspective(proj, 45 * rad, ratio, .1, 100);
 
+
+//	texture
+const texture = PIXI.Texture.from('assets/img.jpg');
+
 const uniforms = {
-	time:0,
+	texture,
 	view,
 	proj
 }
 
-//	shader
+
+
 const vs = require('./shaders/basic.vert')();
-const vsNoise = require('./shaders/noise.vert')();
 const fs = require('./shaders/basic.frag')();
 
 //	shader
-const shader = new PIXI.Shader.from(vsNoise, fs, uniforms);
+const shader = new PIXI.Shader.from(vs, fs, uniforms);
 
 //	mesh
 const mesh = new PIXI.mesh.RawMesh(geometry, shader);
@@ -78,7 +76,6 @@ function loop() {
 
 	cameraControl.update();
 
-	uniforms.time += 0.002;
 	renderer.render(stage);
 }
 
