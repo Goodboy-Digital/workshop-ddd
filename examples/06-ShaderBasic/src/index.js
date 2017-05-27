@@ -57,43 +57,12 @@ const uniforms = {
 }
 
 //	shader
-const shader = new PIXI.Shader.from(`
-	precision highp float;
-	attribute vec3 aVertexPosition;
-	attribute vec3 aNormal;
-	attribute vec3 aCenter;
+const vs = require('./shaders/basic.vert')();
+const vsNoise = require('./shaders/noise.vert')();
+const fs = require('./shaders/basic.frag')();
 
-	uniform mat4 view;
-	uniform mat4 proj;
-	uniform float time;
-
-	varying vec3 vNormal;
-
-	void main() {
-
-		vec3 relative = aVertexPosition - aCenter;
-		float offset = sin(aVertexPosition.x + aVertexPosition.y + aVertexPosition.z + time) * 0.5 + 0.5;
-		vec3 position = aCenter + relative * offset;
-
-		gl_Position = proj * view * vec4(position, 1.0);
-
-		vNormal = aNormal;
-	}
-	`,`
-	precision highp float;
-
-	varying vec3 vNormal;
-
-	float diffuse(vec3 N, vec3 L) {
-		return max(dot(N, normalize(L)), 0.0);
-	}
-	
-	void main() {
-		float d = diffuse(vNormal, vec3(1.0));
-		gl_FragColor = vec4(vec3(d), 1.0);
-	}
-	`
-	, uniforms);
+//	shader
+const shader = new PIXI.Shader.from(vsNoise, fs, uniforms);
 
 //	mesh
 const mesh = new PIXI.mesh.RawMesh(geometry, shader);
@@ -109,7 +78,7 @@ function loop() {
 
 	cameraControl.update();
 
-	uniforms.time += 0.03;
+	uniforms.time += 0.01;
 	renderer.render(stage);
 }
 
