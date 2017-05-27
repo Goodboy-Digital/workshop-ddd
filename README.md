@@ -17,6 +17,7 @@
 1. Instancing
 2. Particles
 3. Audio Visualisation
+4. VR (With WebVR Polyfill)
 
 
 ### Other examples : 
