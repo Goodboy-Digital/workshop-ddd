@@ -2,7 +2,7 @@
 
 const fs                = require('fs');
 const path              = require('path');
-const findFolder        = require('./find-folder');
+const findFolderPromise = require('./find-folder-promise');
 const watcher           = require('./watch');
 const copyFile          = require('./copy-file');
 const checkExtension    = require('./checkExtension');
@@ -17,28 +17,28 @@ const regShader         = /shaders\/.+\.(vert|frag)/g;
 let shaderPath;
 let watcherViews = watcher([PATH_SRC]);
 
-
-findFolder(PATH_SRC, 'shaders', (mPath)=> {
-	shaderPath = mPath;
+findFolderPromise(PATH_SRC, 'shaders').then( path => {
+	shaderPath = path;
 	startWatch();
 });
 
-
 function startWatch() {
 	watcherViews.on('all',(event, file) => {
-		console.log('Event:', event, 'file :' , file);
 		if(file.indexOf('.DS_Store') > -1) return;
 		if(!checkExtension(file, ['js'])) return;
 		
 		if(event !== 'add' && event !== 'change') return;
-		console.log('here');
-		getShaderImports(file, (shaderImports) => onFile(shaderImports));
+
+		getShaderImportsPromise(file).then((shaderImports)=> {
+			shaderImports.forEach((mName)=> {
+				isShaderExist(mName, (name)=>generateShader(name));
+			});
+		});
 	});
 }
 
 function onFile(shaderImports) {
 	if(shaderImports.length == 0) { return;	}
-	console.log('Shader Imports :', shaderImports);
 
 	shaderImports.forEach((mName)=> {
 		isShaderExist(mName, (name)=>generateShader(name));
@@ -54,13 +54,12 @@ function generateShader(mName) {
 	}
 }
 
-
-function getShaderImports(mPath, mCallback) {
+const getShaderImportsPromise = (mPath) => new Promise((resolve, reject) => {
 	let results = [];
 
 	fs.readFile(mPath, 'utf8', (err, str) => {
 		if(err) {
-			console.log('Error Loading file !');
+			reject('Error Loading file !');
 		} else {
 			let match;
 			while( match = regShader.exec(str)) {
@@ -71,14 +70,11 @@ function getShaderImports(mPath, mCallback) {
 				return path.replace('shaders/', '');
 			});
 
-			mCallback(results);
+			resolve(results);
 		}
 	});
-}
+});
 
-function hasShaderImport(mPath) {
-	return getShaderImports(mPath).length > 0;
-}
 
 function isShaderExist(mShaderName, mCallback) {
 	fs.readdir(shaderPath, (err, files) => {

@@ -20,6 +20,5 @@ module.exports = function checkExtension(mFile, mExtensions) {
 	}
 
 	const ext = path.extname(mFile).replace('.', '');
-	console.log('Extension name :', ext);
 	return mExtensions.indexOf(ext) > -1;
 }
