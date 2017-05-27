@@ -8,8 +8,9 @@
 5. Camera control
 6. Shader Basic
 7. Texture
-8. Framebuffer
-9. Basic Lighting
+8. CubeTexture
+9. Framebuffer
+10. Basic Lighting
 
 
 ### Advanced examples : 
