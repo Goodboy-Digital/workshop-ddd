@@ -27,28 +27,17 @@ const geometry = 	new PIXI.mesh.Geometry()
 					.addAttribute('aVertexPosition', positions, 3)
 					.addAttribute('aColor', colors, 3)
 					.addIndex(indices);
+
+const uniforms = {
+	color:[1.0, 1.0, 1.0],
+	time:0
+}
+
+const vs = require('./shaders/basic.vert')();
+const fs = require('./shaders/basic.frag')();
+
 //	shader
-const shader = new PIXI.Shader.from(`
-	precision highp float;
-	attribute vec3 aVertexPosition;
-	attribute vec3 aColor;
-
-	varying vec3 vColor;
-
-	void main() {
-		gl_Position = vec4(aVertexPosition, 1.0);
-
-		vColor = aColor;
-	}
-	`,`
-	precision highp float;
-
-	varying vec3 vColor;
-	void main() {
-		gl_FragColor = vec4(vColor, 1.0);
-	}
-	`
-	);
+const shader = new PIXI.Shader.from(vs, fs, uniforms);
 
 //	mesh
 const mesh = new PIXI.mesh.RawMesh(geometry, shader);
@@ -61,6 +50,7 @@ loop();
 function loop() {
 	requestAnimationFrame(loop);
 
+	uniforms.time += 0.01;
 	renderer.render(stage);
 }
 

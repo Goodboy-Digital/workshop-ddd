@@ -21,21 +21,11 @@ const indices = [0, 1, 2];
 const geometry = 	new PIXI.mesh.Geometry()
 					.addAttribute('aVertexPosition', positions, 3).
 					addIndex(indices);
-//	shader
-const shader = new PIXI.Shader.from(`
-	precision highp float;
-	attribute vec3 aVertexPosition;
 
-	void main() {
-		gl_Position = vec4(aVertexPosition, 1.0);
-	}
-	`,`
-	precision highp float;
-	void main() {
-		gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-	}
-	`
-	);
+const vs = require('./shaders/basic.vert')();
+const fs = require('./shaders/basic.frag')();
+//	shader
+const shader = new PIXI.Shader.from(vs,fs);
 
 //	mesh
 const mesh = new PIXI.mesh.RawMesh(geometry, shader);

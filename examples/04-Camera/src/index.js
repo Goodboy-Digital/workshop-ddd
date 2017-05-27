@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
+import dat from 'dat-gui';
 import { mat4, vec3 } from 'gl-matrix';
-import OrbitalCameraControl from './OrbitalCameraControl';
 
 //	initialize pixi
 const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
@@ -33,17 +33,31 @@ const geometry = 	new PIXI.mesh.Geometry()
 //	camera
 //	1. view matrix
 const view = mat4.create();
-// const eye = vec3.fromValues(0, 0, 5);
-// const center = vec3.fromValues(0, 0, 0);
-// const up = vec3.fromValues(0, 1, 0);
-// mat4.lookAt(view, eye, center, up);
-const cameraControl = new OrbitalCameraControl(view, 5);
+const eye = vec3.fromValues(0, 0, 5);
+const center = vec3.fromValues(0, 0, 0);
+const up = vec3.fromValues(0, 1, 0);
+mat4.lookAt(view, eye, center, up);
 
 //	2. projection matrix
 const proj = mat4.create();
 const rad = Math.PI/180;
 const ratio = window.innerWidth / window.innerHeight;
 mat4.perspective(proj, 45 * rad, ratio, .1, 100);
+
+//	gui
+const gui = new dat.GUI();
+const o = {
+	fov:45,
+	x:0
+}
+gui.add(o, 'fov', 10, 180).onChange(()=> {
+	mat4.perspective(proj, o.fov * rad, ratio, .1, 100);
+});
+
+gui.add(o, 'x', -5, 5).onChange(()=> {
+	const eye = vec3.fromValues(o.x, 0, 5);
+	mat4.lookAt(view, eye, center, up);
+});
 
 const uniforms = {
 	color:[1.0, 1.0, 1.0],
@@ -52,35 +66,13 @@ const uniforms = {
 	proj
 }
 
+console.log(uniforms);
+
+const vs = require('./shaders/basic.vert')();
+const fs = require('./shaders/basic.frag')();
+
 //	shader
-const shader = new PIXI.Shader.from(`
-	precision highp float;
-	attribute vec3 aVertexPosition;
-	attribute vec3 aColor;
-
-	uniform mat4 view;
-	uniform mat4 proj;
-
-	varying vec3 vColor;
-
-	void main() {
-		gl_Position = proj * view * vec4(aVertexPosition, 1.0);
-
-		vColor = aColor;
-	}
-	`,`
-	precision highp float;
-
-	varying vec3 vColor;
-	uniform vec3 color;
-	uniform float time;
-	
-	void main() {
-		float offset = sin(time) * 0.5 + 0.5;
-		gl_FragColor = vec4(mix(vColor, color, offset), 1.0);
-	}
-	`
-	, uniforms);
+const shader = new PIXI.Shader.from(vs, fs, uniforms);
 
 //	mesh
 const mesh = new PIXI.mesh.RawMesh(geometry, shader);
@@ -92,8 +84,6 @@ loop();
 
 function loop() {
 	requestAnimationFrame(loop);
-
-	cameraControl.update();
 
 	uniforms.time += 0.01;
 	renderer.render(stage);
