@@ -1,4 +1,4 @@
-import * as PIXI from 'pixi.js';
+// import * as PIXI from 'pixi.js';
 import { mat4, vec3 } from 'gl-matrix';
 import OrbitalCameraControl from './OrbitalCameraControl';
 import Cube from './Cube';
@@ -16,16 +16,16 @@ const stage = new PIXI.Stage();
 //	geometry
 const { positions, uvs, normals, indices } = Cube;
 
-const num = 20;
-const gap = 1;
+const num = 10;
+const gap = 2;
 let posOffset = [];
 
 for(let i=0; i<num; i++) {
 	for(let j=0; j<num; j++) {
 		for(let k=0; k<num; k++) {
-			let x = (num/2 + i) * gap;
-			let y = (num/2 + j) * gap;
-			let z = (num/2 + k) * gap;
+			let x = (-num/2 + i) * gap + gap * 0.5;
+			let y = (-num/2 + j) * gap + gap * 0.5;
+			let z = (-num/2 + k) * gap + gap * 0.5;
 
 			posOffset = posOffset.concat([x, y, z]);
 		}
@@ -37,16 +37,16 @@ console.log(posOffset.length, positions.length);
 const geometry = 	new PIXI.mesh.Geometry()
 					.addAttribute('aVertexPosition', positions, 3)
 					.addAttribute('aNormal', normals, 3)
-					// .addAttribute('aPosOffset', posOffset, 3, false, PIXI.TYPES.FLOAT, 0, 0, true)
+					.addAttribute('aPosOffset', posOffset, 3, false, PIXI.TYPES.FLOAT, 0, 0, true)
 					.addAttribute('aUV', uvs, 2)
 					.addIndex(indices);
 
-// geometry.instanceCount = Math.pow(num, 3);
+geometry.instanceCount = Math.pow(num, 3);
 
 //	camera
 //	1. view matrix
 const view = mat4.create();
-const cameraControl = new OrbitalCameraControl(view, 25);
+const cameraControl = new OrbitalCameraControl(view, 35);
 
 //	2. projection matrix
 const proj = mat4.create();
@@ -56,12 +56,13 @@ mat4.perspective(proj, 45 * rad, ratio, .1, 100);
 
 
 //	texture
-const texture = PIXI.Texture.from('assets/img.jpg');
+const texture = PIXI.Texture.from('assets/gradient.jpg');
 
 const uniforms = {
 	texture,
 	view,
-	proj
+	proj,
+	time:0
 }
 
 
@@ -82,6 +83,7 @@ loop();
 
 
 function loop() {
+	shader.uniforms.time += 0.01;
 	requestAnimationFrame(loop);
 
 	cameraControl.update();
