@@ -28,10 +28,10 @@ const positionSquare = [
 	-size, -size, 0
 ]					
 const uvsSquare = [
-	0, 0,
-	1, 0,
+	0, 1,
 	1, 1,
-	0, 1
+	1, 0,
+	0, 0
 ]
 const indicesSquare = [0, 1, 2, 0, 2, 3];
 const geometrySquare = new PIXI.mesh.Geometry()
@@ -42,7 +42,10 @@ const geometrySquare = new PIXI.mesh.Geometry()
 //	camera
 //	1. view matrix
 const view = mat4.create();
-const cameraControl = new OrbitalCameraControl(view, 10);
+const viewSquare = mat4.create();
+const cameraControl = new OrbitalCameraControl(view, .1);
+const cameraControlSquare = new OrbitalCameraControl(viewSquare, 10);
+
 
 //	2. projection matrix
 const proj = mat4.create();
@@ -64,12 +67,12 @@ const texture = PIXI.CubeTexture.from(
 //	fbo
 const fboSize = 512;
 const fbo = new PIXI.FrameBuffer(fboSize, fboSize)
-.addColorTexture(0);
-console.log(fbo);
+.addColorTexture(0)
+.addDepthTexture();
 
-for(var s in renderer) {
-	console.log(s, renderer[s]);
-}
+fbo.colorTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
+fbo.colorTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
+
 
 const uniforms = {
 	texture,
@@ -79,7 +82,7 @@ const uniforms = {
 
 const uniformsSquare = {
 	texture:fbo.colorTexture,
-	view,
+	view:viewSquare,
 	proj
 }
 
@@ -113,8 +116,10 @@ function loop() {
 	requestAnimationFrame(loop);
 
 	cameraControl.update();
+	cameraControlSquare.update();
 
 	renderer.framebuffer.bind(fbo);
+	renderer.framebuffer.clear();
 	renderer.plugins.mesh.render(mesh);
 
 	renderer.framebuffer.bind(null);
