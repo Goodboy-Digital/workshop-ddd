@@ -26,7 +26,7 @@ const positionSquare = [
 	 size,  size, 0,
 	 size, -size, 0,
 	-size, -size, 0
-]					
+]
 const uvsSquare = [
 	0, 0,
 	1, 0,
@@ -64,8 +64,9 @@ const texture = PIXI.CubeTexture.from(
 //	fbo
 const fboSize = 512;
 const fbo = new PIXI.FrameBuffer(fboSize, fboSize)
-.addColorTexture(0);
-console.log(fbo);
+.addColorTexture(0)
+.addColorTexture(1)
+.enableDepth();
 
 for(var s in renderer) {
 	console.log(s, renderer[s]);
@@ -78,7 +79,7 @@ const uniforms = {
 }
 
 const uniformsSquare = {
-	texture:fbo.colorTexture,
+	texture:fbo.colorTextures[1],
 	view,
 	proj
 }
@@ -92,8 +93,8 @@ const fsSquare = require('./shaders/square.frag')();
 
 
 //	shader
-const shader       = new PIXI.Shader.from(vs, fs, uniforms);
-const shaderSquare = new PIXI.Shader.from(vsSquare, fsSquare, uniformsSquare);
+const shader       = PIXI.Shader.from(vs, fs, uniforms);
+const shaderSquare = PIXI.Shader.from(vsSquare, fsSquare, uniformsSquare);
 
 //	mesh
 const mesh = new PIXI.mesh.RawMesh(geometry, shader);
@@ -115,6 +116,8 @@ function loop() {
 	cameraControl.update();
 
 	renderer.framebuffer.bind(fbo);
+	renderer.framebuffer.clear();
+
 	renderer.plugins.mesh.render(mesh);
 
 	renderer.framebuffer.bind(null);
