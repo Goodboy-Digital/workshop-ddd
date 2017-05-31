@@ -1,5 +1,7 @@
 // VIVEUtils.js
 
+import { vec3, mat4 } from 'gl-matrix';
+
 let count = 0;
 
 class VIVEUtils {
@@ -92,13 +94,14 @@ class VIVEUtils {
 	}
 
 
-	setCamera(mCamera, mDir) {
+	setCamera(view, proj, mDir) {
 		const projection = this._frameData[`${mDir}ProjectionMatrix`];
 		const matrix = this._frameData[`${mDir}ViewMatrix`];
 
-		mat4.copy(mCamera.matrix, matrix);
-		mat4.copy(mCamera.projection, projection);
+		mat4.copy(view, matrix);
+		mat4.copy(proj, projection);
 	}
+
 
 	_checkGamepads() {
 		if(!navigator.getGamepads) {	return; }

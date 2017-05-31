@@ -3,10 +3,12 @@ import { mat4, vec3 } from 'gl-matrix';
 import OrbitalCameraControl from './OrbitalCameraControl';
 import Model from './model';
 import parseObj from './objParser';
+import VIVEUtils from './VIVEUtils';
 
 //	initialize pixi
 const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
 document.body.appendChild(renderer.view);
+renderer.clearBeforeRender = false;
 
 //	events
 document.body.addEventListener('resize', resize);
@@ -68,15 +70,56 @@ mesh.state.depthTest = true;
 
 stage.addChild(mesh);
 
-loop();
+
+let vrDisplay
+VIVEUtils.init((display)=> {
+
+	//	vr display
+	vrDisplay = display;
+
+	const btnVR = document.body.querySelector('.vr');
+	btnVR.addEventListener('click', enterVR);
+	loop();
+});
+
+
+function enterVR() {
+	console.log('enter vr');
+
+	VIVEUtils.present(renderer.gl.canvas, ()=> {
+		console.log('Presented in vr');
+	});
+}
+
+
+const scissor = function(x, y, w, h) {
+	renderer.gl.scissor(x, y, w, h);
+	renderer.gl.viewport(x, y, w, h);
+}
+
+
 
 
 function loop() {
-	requestAnimationFrame(loop);
+	// requestAnimationFrame(loop);
+	vrDisplay.requestAnimationFrame(loop);
+	const w2 = window.innerWidth / 2;
 
-	cameraControl.update();
+	//	get vr data
+	VIVEUtils.getFrameData();
 
+	//	render left eye
+	VIVEUtils.setCamera(view, proj, 'left');
+	scissor(0, 0, w2, window.innerHeight);
 	renderer.render(stage);
+
+	//	render right eye
+	VIVEUtils.setCamera(view, proj, 'right');
+	scissor(w2, 0, w2, window.innerHeight);
+	renderer.render(stage);
+	
+	//	submit
+	VIVEUtils.submitFrame();
 }
 
 function resize() {
