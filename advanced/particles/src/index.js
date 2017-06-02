@@ -14,7 +14,7 @@ const stage = new PIXI.Stage();
 
 //	settings
 const random = function(min, max) { return min + Math.random() * (max - min);	}
-const numParticles = 64;
+const numParticles = 64 * 2;
 
 
 //	camera
@@ -124,7 +124,7 @@ const uniformsSim = {
 	texturePos:fbo0.colorTextures[0],
 	textureVel:fbo0.colorTextures[1],
 	textureExtra:fbo0.colorTextures[2],
-	time:0
+	time:Math.random() * 0xFF
 }
 const shaderSim = PIXI.Shader.from(vsSim, fsSim, uniformsSim);
 const meshSim = new PIXI.mesh.RawMesh(geometryQuad, shaderSim);

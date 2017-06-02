@@ -19,8 +19,8 @@ const positions = [
 ];
 const indices = [0, 1, 2];
 const geometry = 	new PIXI.mesh.Geometry()
-					.addAttribute('aVertexPosition', positions, 3).
-					addIndex(indices);
+					.addAttribute('aVertexPosition', positions, 3)
+					.addIndex(indices);
 
 const vs = require('./shaders/basic.vert')();
 const fs = require('./shaders/basic.frag')();
