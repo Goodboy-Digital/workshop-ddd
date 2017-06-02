@@ -122,7 +122,7 @@ void main(void) {
 
     float posOffset = 0.2 * mix(extra.r, 1.0, .25);
     vec3 acc = curlNoise(pos * posOffset + time * 0.5);
-    vel += acc * 0.24 * (mix(extra.g, 1.0, .5));
+    vel += acc * 0.01 * (mix(extra.g, 1.0, .5));
     
 
     const float maxRadius = 4.0;
@@ -138,6 +138,6 @@ void main(void) {
 
 
     gl_FragData[0] = vec4(pos, 1.0);
-    gl_FragData[1] = vec4(1.0, 0.0, 0.0, 1.0);
+    gl_FragData[1] = vec4(vel, 1.0);
     gl_FragData[2] = vec4(extra, 1.0);
 }
