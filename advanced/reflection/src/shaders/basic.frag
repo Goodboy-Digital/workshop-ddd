@@ -14,7 +14,7 @@ void main() {
 
 	vec3 reflected = reflect(incident_eye, normal);
 
-	float ratio = 1.03;//1.0 /1.3333;
+	float ratio = 1.06;//1.0 /1.3333;
 	vec3 refracted = refract(incident_eye, normal, ratio);
 
 	// convert from eye to world space
