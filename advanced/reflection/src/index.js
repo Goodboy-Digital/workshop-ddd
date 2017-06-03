@@ -130,7 +130,7 @@ function loop() {
 	//uniforms.mvMatrix = controls.viewMatrix;
 	uniforms.normalMatrix = normalMatrix;
 	uniforms.vInverseMatrix = vInverseMatrix;
-
+	uniforms.time += 0.1
 
 	renderer.render(stage);
 }
