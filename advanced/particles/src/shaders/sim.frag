@@ -120,16 +120,21 @@ void main(void) {
     vec3 vel = texture2D(textureVel, vTextureCoord).rgb;
     vec3 extra = texture2D(textureExtra, vTextureCoord).rgb;
 
-    float posOffset = 0.2 * mix(extra.r, 1.0, .25);
+    float posOffset = 0.1 * mix(extra.r, 1.0, .25);
     vec3 acc = curlNoise(pos * posOffset + time * 0.5);
-    vel += acc * 0.01 * (mix(extra.g, 1.0, .5));
+    vel += acc * 0.005 * (mix(extra.g, 1.0, .5));
+
+
+
+    // position = position + velocity * time;
+    // velocity = velocity + acceration ( force ) * time;
     
 
     const float maxRadius = 4.0;
     float dist = length(pos);
     if( dist > maxRadius) {
     	vec3 dir = normalize(pos);
-    	float f = (dist - maxRadius) * 0.002;
+    	float f = (dist - maxRadius) * 0.0002;
     	vel -= dir * f; 
     }
 

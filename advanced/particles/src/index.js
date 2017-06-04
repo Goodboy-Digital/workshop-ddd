@@ -183,6 +183,7 @@ function loop() {
 
 	renderer.plugins.mesh.render(meshParticles);
 
+/*
 	const s = 200;
 	renderer.gl.viewport(0, 0, s, s);
 	uniformsPass.texture = flop.colorTextures[0];
@@ -195,6 +196,8 @@ function loop() {
 	renderer.gl.viewport(s*2, 0, s, s);
 	uniformsPass.texture = flop.colorTextures[2];
 	renderer.plugins.mesh.render(meshPass);
+
+	*/
 }
 
 function resize() {

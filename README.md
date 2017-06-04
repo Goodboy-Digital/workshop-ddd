@@ -18,9 +18,5 @@
 2. Particles
 3. Audio Visualisation
 4. VR (With WebVR Polyfill)
-
-
-### Other examples : 
-1. Comic Style : http://dev.goodboydigital.com/client/goodboy/labs/dayNight/
-2. Splashes : http://dev.goodboydigital.com/client/goodboy/labs/splashes/
-3. Wolf : http://yiwenl.github.io/Sketches/exps/23/ ( need to convert to PIXI ) 
+5. Globe
+6. Reflection

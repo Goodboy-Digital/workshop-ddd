@@ -63,8 +63,8 @@ class VIVEUtils {
 		}
 
 		this._vrDisplay.requestPresent([{ source: mCanvas }]).then( () => {
-			console.log(' on request VR ', window.innerWidth, window.innerHeight);
-			this.vrPresenting = true;
+			// console.log(' on request VR ', window.innerWidth, window.innerHeight);
+			// this.vrPresenting = true;
 
 			if(callback) {
 				callback();
@@ -97,6 +97,13 @@ class VIVEUtils {
 	setCamera(view, proj, mDir) {
 		const projection = this._frameData[`${mDir}ProjectionMatrix`];
 		const matrix = this._frameData[`${mDir}ViewMatrix`];
+
+		/*
+			leftProjectionMatrix,
+			rightProjectionMatrix,
+			leftViewMatrix,
+			rightViewMatrix
+		*/
 
 		mat4.copy(view, matrix);
 		mat4.copy(proj, projection);

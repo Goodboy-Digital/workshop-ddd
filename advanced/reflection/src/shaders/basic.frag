@@ -24,6 +24,6 @@ void main() {
 	vec4 sampleReflected = textureCube(texture, reflected);
 	vec4 sampleRefracted = textureCube(texture, refracted);
 
-	gl_FragColor = mix(sampleReflected, sampleRefracted, 0.8);
+	gl_FragColor = mix(sampleReflected, sampleRefracted, 0.5);
 
 }
