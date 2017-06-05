@@ -14,3 +14,9 @@
 1. Shader Editor : https://github.com/spite/ShaderEditorExtension
 2. Spector.js : https://spector.babylonjs.com/
 3. GL Inspector : https://benvanik.github.io/WebGL-Inspector/
+
+
+
+## Contacts
+Mat : mat@goodboydigital.com
+Wen : wen@goodboydigital.com
