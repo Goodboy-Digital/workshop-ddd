@@ -35,12 +35,12 @@ const distributionRange = 4;
 // **********************************
 
 const camera = {
-	viewMatrix: mat4.create(),
-	projMatrix: mat4.create(),
-	fov: 45 * Math.PI / 180,
-	aspect: app.screen.width / app.screen.height, // update aspect ratio value when window resized
-	near: 0.1,
-	far: 100,
+  viewMatrix: mat4.create(),
+  projMatrix: mat4.create(),
+  fov: 45 * Math.PI / 180,
+  aspect: app.screen.width / app.screen.height, // update aspect ratio value when window resized
+  near: 0.1,
+  far: 100,
 };
 
 mat4.perspective(camera.projMatrix, camera.fov, camera.aspect, camera.near, camera.far);
