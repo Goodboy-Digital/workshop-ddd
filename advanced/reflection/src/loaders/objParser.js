@@ -1,292 +1,209 @@
-// ObjLoader.js
+// objParser.js
 
-'use strict';
+export default function parseObj(objStr) {
+  const lines = objStr.split('\n');
 
-import * as PIXI from 'pixi.js';
+  const groups = [];
+  const positions = [];
+  const coords = [];
+  const finalNormals = [];
+  const vertices = [];
+  const normals = [];
+  const uvs = [];
+  const indices = [];
+  let count = 0;
+  let result;
 
-function flatten(array, size = 3)
-{
-    var flat = [];
+  // v float float float
+  const vertexPattern = /v( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)/;
 
-    for (var i = 0; i < array.length; i++) {
+  // vn float float float
+  const normalPattern = /vn( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)/;
 
-        for (var j = 0; j < size; j++) {
-            flat[(i * size) + j] = array[i][j];
-        };
-    };
+  // vt float float
+  const uvPattern = /vt( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)/;
 
-    return new Float32Array( flat );
+  // f vertex vertex vertex ...
+  const facePattern1 = /f( +-?\d+)( +-?\d+)( +-?\d+)( +-?\d+)?/;
 
-}
+  // f vertex/uv vertex/uv vertex/uv ...
+  const facePattern2 = /f( +(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+))?/;
 
-function _generateMeshes(o) {
+  // f vertex/uv/normal vertex/uv/normal vertex/uv/normal ...
+  const facePattern3 = /f( +(-?\d+)\/(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+)\/(-?\d+))?/;
 
-    var geometry = new PIXI.mesh.Geometry()
-    .addAttribute('uv', flatten(o.coords, 2), 2 )
-    .addAttribute('position',  flatten(o.positions), 3 )
-    .addAttribute('normals',  flatten(o.normals), 3 )
-    .addIndex(new Uint16Array(o.indices) )
+  // f vertex//normal vertex//normal vertex//normal ...
+  const facePattern4 = /f( +(-?\d+)\/\/(-?\d+))( +(-?\d+)\/\/(-?\d+))( +(-?\d+)\/\/(-?\d+))( +(-?\d+)\/\/(-?\d+))?/;
 
-    geometry.drawCalls = o.groups;
+  const mtlPattern = /usemtl/;
 
-    return geometry;
-}
+  let lastMaterial = null;
 
-function parseObj(objStr)
-{
-	const lines = objStr.split('\n');
+  function parseVertexIndex(value) {
+    const index = parseInt(value);
+    return (index >= 0 ? index - 1 : index + vertices.length / 3) * 3;
+  }
 
-    const groups = [];
-	const positions    = [];
-	const coords       = [];
-	const finalNormals = [];
-	const vertices     = [];
-	const normals      = [];
-	const uvs          = [];
-	const indices      = [];
-	let count        = 0;
-	let result;
+  function parseNormalIndex(value) {
+    const index = parseInt(value);
+    return (index >= 0 ? index - 1 : index + normals.length / 3) * 3;
+  }
 
-	// v float float float
-	const vertexPattern = /v( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)/;
+  function parseUVIndex(value) {
+    const index = parseInt(value);
+    return (index >= 0 ? index - 1 : index + uvs.length / 2) * 2;
+  }
 
-	// vn float float float
-	const normalPattern = /vn( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)/;
+  function addVertex(a, b, c) {
+    positions.push([vertices[a], vertices[a + 1], vertices[a + 2]]);
+    positions.push([vertices[b], vertices[b + 1], vertices[b + 2]]);
+    positions.push([vertices[c], vertices[c + 1], vertices[c + 2]]);
 
-	// vt float float
-	const uvPattern = /vt( +[\d|\.|\+|\-|e|E]+)( +[\d|\.|\+|\-|e|E]+)/;
+    indices.push(count * 3 + 0);
+    indices.push(count * 3 + 1);
+    indices.push(count * 3 + 2);
 
-	// f vertex vertex vertex ...
-	const facePattern1 = /f( +-?\d+)( +-?\d+)( +-?\d+)( +-?\d+)?/;
+    count++;
+  }
 
-	// f vertex/uv vertex/uv vertex/uv ...
-	const facePattern2 = /f( +(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+))?/;
+  function addUV(a, b, c) {
+    coords.push([uvs[a], uvs[a + 1]]);
+    coords.push([uvs[b], uvs[b + 1]]);
+    coords.push([uvs[c], uvs[c + 1]]);
+  }
 
-	// f vertex/uv/normal vertex/uv/normal vertex/uv/normal ...
-	const facePattern3 = /f( +(-?\d+)\/(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+)\/(-?\d+))( +(-?\d+)\/(-?\d+)\/(-?\d+))?/;
+  function addNormal(a, b, c) {
+    finalNormals.push([normals[a], normals[a + 1], normals[a + 2]]);
+    finalNormals.push([normals[b], normals[b + 1], normals[b + 2]]);
+    finalNormals.push([normals[c], normals[c + 1], normals[c + 2]]);
+  }
 
-	// f vertex//normal vertex//normal vertex//normal ...
-	const facePattern4 = /f( +(-?\d+)\/\/(-?\d+))( +(-?\d+)\/\/(-?\d+))( +(-?\d+)\/\/(-?\d+))( +(-?\d+)\/\/(-?\d+))?/;
+  function addFace(a, b, c, d, ua, ub, uc, ud, na, nb, nc, nd) {
+    let ia = parseVertexIndex(a);
+    let ib = parseVertexIndex(b);
+    let ic = parseVertexIndex(c);
+    let id;
 
-    const mtlPattern = /usemtl/
-
-    let lastMaterial = null;
-
-    function parseVertexIndex(value)
-    {
-        const index = parseInt(value);
-        return (index >= 0 ? index - 1 : index + vertices.length / 3) * 3;
+    if (d === undefined) {
+      addVertex(ia, ib, ic);
+    } else {
+      id = parseVertexIndex(d);
+      addVertex(ia, ib, id);
+      addVertex(ib, ic, id);
     }
 
-    function parseNormalIndex(value)
-    {
-        const index = parseInt(value);
-        return (index >= 0 ? index - 1 : index + normals.length / 3) * 3;
+    if (ua !== undefined) {
+      ia = parseUVIndex(ua);
+      ib = parseUVIndex(ub);
+      ic = parseUVIndex(uc);
+
+      if (d === undefined) {
+        addUV(ia, ib, ic);
+      } else {
+        id = parseUVIndex(ud);
+        addUV(ia, ib, id);
+        addUV(ib, ic, id);
+      }
     }
 
-    function parseUVIndex(value)
-    {
-        const index = parseInt(value);
-        return (index >= 0 ? index - 1 : index + uvs.length / 2) * 2;
+    if (na !== undefined) {
+      ia = parseNormalIndex(na);
+      ib = parseNormalIndex(nb);
+      ic = parseNormalIndex(nc);
+
+      if (d === undefined) {
+        addNormal(ia, ib, ic);
+      } else {
+        id = parseNormalIndex(nd);
+        addNormal(ia, ib, id);
+        addNormal(ib, ic, id);
+      }
     }
+  }
 
-    function addVertex(a, b, c)
-    {
-        positions.push([vertices[a], vertices[a + 1], vertices[a + 2]]);
-        positions.push([vertices[b], vertices[b + 1], vertices[b + 2]]);
-        positions.push([vertices[c], vertices[c + 1], vertices[c + 2]]);
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    line = line.trim();
 
-        indices.push(count * 3 + 0);
-        indices.push(count * 3 + 1);
-        indices.push(count * 3 + 2);
+    if (line.length === 0 || line.charAt(0) === '#') {
+      continue;
+    } else if ((result = vertexPattern.exec(line)) !== null) {
+      vertices.push(
+        parseFloat(result[1]),
+        parseFloat(result[2]),
+        parseFloat(result[3])
+      );
+    } else if ((result = normalPattern.exec(line)) !== null) {
+      normals.push(
+        parseFloat(result[1]),
+        parseFloat(result[2]),
+        parseFloat(result[3])
+      );
+    } else if ((result = uvPattern.exec(line)) !== null) {
+      uvs.push(
+        parseFloat(result[1]),
+        1 - parseFloat(result[2])
+      );
+    } else if ((result = facePattern1.exec(line)) !== null) {
+      addFace(
+        result[1], result[2], result[3], result[4]
+      );
+    } else if ((result = facePattern2.exec(line)) !== null) {
+      addFace(
+        result[2], result[5], result[8], result[11],
+        result[3], result[6], result[9], result[12]
+      );
+    } else if ((result = facePattern3.exec(line)) !== null) {
+      addFace(
+        result[2], result[6], result[10], result[14],
+        result[3], result[7], result[11], result[15],
+        result[4], result[8], result[12], result[16]
+      );
 
-        count ++;
-    }
+    } else if ((result = facePattern4.exec(line)) !== null) {
+      addFace(
+        result[2], result[5], result[8], result[11],
+        undefined, undefined, undefined, undefined,
+        result[3], result[6], result[9], result[12]
+      );
 
-    function addUV(a, b, c)
-    {
-        coords.push([uvs[a], uvs[a + 1]]);
-        coords.push([uvs[b], uvs[b + 1]]);
-        coords.push([uvs[c], uvs[c + 1]]);
-    }
+    } else if (result = mtlPattern.exec(line)) {
+      if (lastMaterial !== line) {
+        lastMaterial = line;
 
-    function addNormal(a, b, c)
-    {
-        finalNormals.push([normals[a], normals[a + 1], normals[a + 2]]);
-        finalNormals.push([normals[b], normals[b + 1], normals[b + 2]]);
-        finalNormals.push([normals[c], normals[c + 1], normals[c + 2]]);
-    }
+        // let lastStart;
 
-    function addFace(a, b, c, d,  ua, ub, uc, ud,  na, nb, nc, nd)
-    {
-        let ia = parseVertexIndex(a);
-        let ib = parseVertexIndex(b);
-        let ic = parseVertexIndex(c);
-        let id;
+        if (groups.length) {
+          const lastGroup = groups[groups.length - 1];
 
-        if (d === undefined) {
-
-            addVertex(ia, ib, ic);
-
+          // lastStart = lastGroup.start + indices.length;
+          lastGroup.size = indices.length - lastGroup.start;
         } else {
-
-            id = parseVertexIndex(d);
-
-            addVertex(ia, ib, id);
-            addVertex(ib, ic, id);
-
+          // lastStart = 0;
         }
 
-        if (ua !== undefined) {
+        groups.push({
+          start: indices.length,
+          size: 0
+        });
 
-            ia = parseUVIndex(ua);
-            ib = parseUVIndex(ub);
-            ic = parseUVIndex(uc);
-
-            if (d === undefined) {
-
-                addUV(ia, ib, ic);
-
-            } else {
-
-                id = parseUVIndex(ud);
-
-                addUV(ia, ib, id);
-                addUV(ib, ic, id);
-
-            }
-
-        }
-
-        if (na !== undefined) {
-
-            ia = parseNormalIndex(na);
-            ib = parseNormalIndex(nb);
-            ic = parseNormalIndex(nc);
-
-            if (d === undefined) {
-
-                addNormal(ia, ib, ic);
-
-            } else {
-
-                id = parseNormalIndex(nd);
-
-                addNormal(ia, ib, id);
-                addNormal(ib, ic, id);
-
-            }
-
-        }
+        // console.log(indices.length);
+        // console.log("FOUND ONE!" + line);
+      }
     }
 
-	for (let i = 0; i < lines.length; i ++) {
-		let line = lines[i];
-		line = line.trim();
+    if (groups.length) {
+      const lastGroup = groups[groups.length - 1];
+      lastGroup.size = indices.length - lastGroup.start;
+    }
 
-		if (line.length === 0 || line.charAt(0) === '#') {
+  }
 
-			continue;
-
-		} else if ((result = vertexPattern.exec(line)) !== null) {
-
-			vertices.push(
-				parseFloat(result[1]),
-				parseFloat(result[2]),
-				parseFloat(result[3])
-			);
-
-		} else if ((result = normalPattern.exec(line)) !== null) {
-
-			normals.push(
-				parseFloat(result[1]),
-				parseFloat(result[2]),
-				parseFloat(result[3])
-			);
-
-		} else if ((result = uvPattern.exec(line)) !== null) {
-
-			uvs.push(
-				parseFloat(result[1]),
-				1-parseFloat(result[2])
-			);
-
-		} else if ((result = facePattern1.exec(line)) !== null) {
-
-			addFace(
-				result[1], result[2], result[3], result[4]
-			);
-
-		} else if ((result = facePattern2.exec(line)) !== null) {
-
-			addFace(
-				result[2], result[5], result[8], result[11],
-				result[3], result[6], result[9], result[12]
-			);
-
-		} else if ((result = facePattern3.exec(line)) !== null) {
-			addFace(
-				result[2], result[6], result[10], result[14],
-				result[3], result[7], result[11], result[15],
-				result[4], result[8], result[12], result[16]
-			);
-
-		} else if ((result = facePattern4.exec(line)) !== null) {
-			addFace(
-				result[2], result[5], result[8], result[11],
-				undefined, undefined, undefined, undefined,
-				result[3], result[6], result[9], result[12]
-			);
-
-		}
-        else if(result = mtlPattern.exec(line))
-        {
-            if(lastMaterial !== line)
-            {
-                lastMaterial = line;
-
-                let lastStart;
-
-                if(groups.length)
-                {
-                    var lastGroup = groups[groups.length-1];
-
-                    lastStart = lastGroup.start + indices.length;
-                    lastGroup.size = indices.length - lastGroup.start;
-                }
-                else
-                {
-                    lastStart = 0;
-                }
-
-                groups.push({
-                    start:indices.length,
-                    size:0
-                });
-
-                console.log(indices.length);
-                console.log("FOUND ONE!" + line)
-            }
-        }
-
-        if(groups.length)
-        {
-
-            var lastGroup = groups[groups.length-1];
-            lastGroup.size = indices.length - lastGroup.start;
-        }
-
-	}
-
-    console.log(groups)
-	return _generateMeshes({
-		positions:positions,
-		coords:coords,
-		normals:finalNormals,
-		indices:indices,
-        groups:groups
-	});
-
+  return {
+    positions: positions,
+    coords: coords,
+    normals: finalNormals,
+    indices: indices,
+    groups: groups
+  };
 }
-
-export default parseObj
