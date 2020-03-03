@@ -1,4 +1,4 @@
-#extension GL_EXT_draw_buffers : require 
+#extension GL_EXT_draw_buffers : require
 
 precision highp float;
 varying vec2 vTextureCoord;
