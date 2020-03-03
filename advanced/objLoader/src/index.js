@@ -26,12 +26,12 @@ const app = new PIXI.Application({
 // **********************************
 
 const camera = {
-	viewMatrix: mat4.create(),
-	projMatrix: mat4.create(),
-	fov: 45 * Math.PI / 180,
-	aspect: app.screen.width / app.screen.height, // update aspect ratio value when window resized
-	near: 0.1,
-	far: 100,
+  viewMatrix: mat4.create(),
+  projMatrix: mat4.create(),
+  fov: 45 * Math.PI / 180,
+  aspect: app.screen.width / app.screen.height, // update aspect ratio value when window resized
+  near: 0.1,
+  far: 100,
 };
 
 mat4.perspective(camera.projMatrix, camera.fov, camera.aspect, camera.near, camera.far);
@@ -74,7 +74,7 @@ function assetsLoaded(loader, resources) {
   console.log('Loaded');
   console.table(resources.carGeometry.geometry.attributes);
   console.log(resources.carTexture.texture);
-	console.log('=======================');
+  console.log('=======================');
 
   //  1. set texture to uniform
   shader.uniforms.texture = resources.carTexture.texture;
