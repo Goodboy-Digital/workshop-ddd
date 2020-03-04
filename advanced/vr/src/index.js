@@ -1,127 +1,155 @@
 import * as PIXI from 'pixi.js';
-import { mat4, vec3 } from 'gl-matrix';
-import OrbitalCameraControl from './OrbitalCameraControl';
-import Model from './model';
-import parseObj from './objParser';
+import { mat4 } from 'gl-matrix';
+import ObjLoader from './loaders/objLoader';
 import VIVEUtils from './VIVEUtils';
 
-//	initialize pixi
-const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
-document.body.appendChild(renderer.view);
-renderer.clearBeforeRender = false;
+const canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
 
-//	events
-document.body.addEventListener('resize', resize);
 
-//	stage
-const stage = new PIXI.Stage();
+// **********************************
+//	initialize PixiJS
+// **********************************
 
-//	geometry
-let positions = [];
-let uvs = [];
-let indices = [0, 1, 2, 0, 2, 3];
+const renderer = new PIXI.Renderer({
+  view: canvas,
+  width: canvas.clientWidth,
+  height: canvas.clientHeight,
+  transparent: true,
+  antialias: true,
+  resolution: window.devicePixelRatio || 1,
+  clearBeforeRender: false,
+});
 
-const size = 2;
-positions = positions.concat([-size, size, 0]);
-positions = positions.concat([ size, size, 0]);
-positions = positions.concat([ size,-size, 0]);
-positions = positions.concat([-size,-size, 0]);
+const stage = new PIXI.Container();
+const loader = PIXI.Loader.shared;
 
-uvs = uvs.concat([0, 0]);
-uvs = uvs.concat([1, 0]);
-uvs = uvs.concat([1, 1]);
-uvs = uvs.concat([0, 1]);
 
-const geometry = parseObj(Model);
-console.log(geometry);
-
+// **********************************
 //	camera
-//	1. view matrix
-const view = mat4.create();
-const cameraControl = new OrbitalCameraControl(view, 5);
+// **********************************
 
-//	2. projection matrix
-const proj = mat4.create();
-const rad = Math.PI/180;
-const ratio = window.innerWidth / window.innerHeight;
-mat4.perspective(proj, 45 * rad, ratio, .1, 100);
+const camera = {
+  viewMatrix: mat4.create(),
+  projMatrix: mat4.create(),
+};
 
 
-//	texture
-const texture = PIXI.Texture.from('assets/ao-map.jpg');
+// **********************************
+//	shader
+// **********************************
 
 const uniforms = {
-	texture,
-	view,
-	proj
-}
-
-
+  texture: PIXI.Texture.EMPTY,
+  view: camera.viewMatrix,
+  proj: camera.projMatrix,
+};
 
 const vs = require('./shaders/basic.vert')();
 const fs = require('./shaders/basic.frag')();
-
-//	shader
 const shader = new PIXI.Shader.from(vs, fs, uniforms);
 
-//	mesh
-const mesh = new PIXI.mesh.RawMesh(geometry, shader);
-mesh.state.depthTest = true;
 
-stage.addChild(mesh);
+// **********************************
+//	assets loader 
+// **********************************
 
-
-let vrDisplay
-VIVEUtils.init((display)=> {
-
-	//	vr display
-	vrDisplay = display;
-
-	const btnVR = document.body.querySelector('.vr');
-	btnVR.addEventListener('click', enterVR);
-	loop();
-});
+const objLod = new ObjLoader(PIXI);
+loader
+  .use(objLod.useHook())
+  .add('model', './assets/model.obj')
+  .add('aomap', './assets/ao-map.jpg')
+  .load(assetsLoaded);
 
 
-function enterVR() {
-	console.log('enter vr');
+// **********************************
+//	loader callback
+// **********************************
 
-	VIVEUtils.present(renderer.gl.canvas, ()=> {
-		console.log('Presented in vr');
-	});
+function assetsLoaded(loader, resources) {
+  const texture = resources.aomap.texture;
+  shader.uniforms.texture = texture;
+
+  const geometry = resources.model.geometry;
+  const mesh = new PIXI.Mesh(geometry, shader);
+  mesh.state.depthTest = true;
+
+  stage.addChild(mesh);
+
+
+  // **********************************
+  //	VR init
+  // **********************************
+
+  VIVEUtils.init((vrDisplay) => {
+    enableVRButton();
+    draw(vrDisplay);
+  });
 }
 
 
-const scissor = function(x, y, w, h) {
-	renderer.gl.scissor(x, y, w, h);
-	renderer.gl.viewport(x, y, w, h);
+// **********************************
+//	render loop callback
+// **********************************
+
+function draw(vrDisplay) {
+  vrDisplay.requestAnimationFrame(loop);
+
+  function loop() {
+    vrDisplay.requestAnimationFrame(loop);
+
+    const halfScreen = renderer.screen.width / 2;
+    // console.log(camera.projMatrix)
+
+    //	get vr data
+    VIVEUtils.getFrameData();
+
+    //	render left eye
+    VIVEUtils.setCamera(camera.viewMatrix, camera.projMatrix, 'left');
+    scissor(renderer, 0, 0, halfScreen, renderer.screen.height);
+    renderer.render(stage);
+
+    //	render right eye
+    VIVEUtils.setCamera(camera.viewMatrix, camera.projMatrix, 'right');
+    scissor(renderer, halfScreen, 0, halfScreen, renderer.screen.height);
+    renderer.render(stage);
+
+    //	submit
+    VIVEUtils.submitFrame();
+  }
 }
 
 
+// **********************************
+//	events
+// **********************************
 
+window.addEventListener('resize', onResize);
 
-function loop() {
-	// requestAnimationFrame(loop);
-	vrDisplay.requestAnimationFrame(loop);
-	const w2 = window.innerWidth / 2;
-
-	//	get vr data
-	VIVEUtils.getFrameData();
-
-	//	render left eye
-	VIVEUtils.setCamera(view, proj, 'left');
-	scissor(0, 0, w2, window.innerHeight);
-	renderer.render(stage);
-
-	//	render right eye
-	VIVEUtils.setCamera(view, proj, 'right');
-	scissor(w2, 0, w2, window.innerHeight);
-	renderer.render(stage);
-	
-	//	submit
-	VIVEUtils.submitFrame();
+function onResize() {
+  renderer.resize(canvas.clientWidth, canvas.clientHeight);
 }
 
-function resize() {
 
+function enableVRButton() {
+  const btnVR = document.body.querySelector('.vr');
+  btnVR.disabled = false;
+  btnVR.addEventListener('click', enterVR);
+
+  function enterVR() {
+    console.log('enter vr');
+    VIVEUtils.present(renderer.gl.canvas, () => {
+      console.log('Presented in vr');
+    });
+  }
+}
+
+
+// **********************************
+//	helper functions
+// **********************************
+
+function scissor(renderer, x, y, w, h) {
+  renderer.gl.scissor(x, y, w, h);
+  renderer.gl.viewport(x, y, w, h);
 }
