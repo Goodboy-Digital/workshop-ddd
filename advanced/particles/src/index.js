@@ -189,5 +189,5 @@ window.addEventListener('resize', onResize);
 
 function onResize() {
   camera.aspect = app.screen.width / app.screen.height;
-  mat4.perspective(camera.projMatrix, camera.fov, camera.aspect, 0.1, 100);
+  mat4.perspective(camera.projMatrix, camera.fov, camera.aspect, camera.near, camera.far);
 }
