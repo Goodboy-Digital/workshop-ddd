@@ -1,4 +1,4 @@
-# All advanced examples are updated to PIXI v5.2.1
+# All examples are updated to PIXI v5.2.1
 ---
 
 # workshop-ddd
