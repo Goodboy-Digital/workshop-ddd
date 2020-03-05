@@ -1,59 +1,77 @@
 import * as PIXI from 'pixi.js';
 
-//	initialize pixi
-const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
-document.body.appendChild(renderer.view);
+const canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
 
-//	events
-document.body.addEventListener('resize', resize);
 
-//	stage
-const stage = new PIXI.Stage();
+// **********************************
+//	initialize PixiJS
+// **********************************
 
+const app = new PIXI.Application({
+  view: canvas,
+  resizeTo: canvas,
+  autoStart: true,
+  transparent: true,
+  antialias: true,
+  resolution: window.devicePixelRatio || 1,
+});
+
+
+// **********************************
 //	geometry
+// **********************************
+
 const r = 0.5;
 const positions = [
-	0, r, 0,
-	r * 0.67, -r, 0,
-	-r * 0.67, -r, 0
+  0, r, 0,
+  r * 0.67, -r, 0,
+  -r * 0.67, -r, 0
 ];
+
 const colors = [
-	1, 0, 0,
-	0, 1, 0,
-	0, 0, 1,
-]
+  1, 0, 0,
+  0, 1, 0,
+  0, 0, 1,
+];
+
 const indices = [0, 1, 2];
-const geometry = 	new PIXI.mesh.Geometry()
-					.addAttribute('aVertexPosition', positions, 3)
-					.addAttribute('aColor', colors, 3)
-					.addIndex(indices);
+const geometry = new PIXI.Geometry()
+  .addAttribute('aVertexPosition', positions, 3)
+  .addAttribute('aColor', colors, 3)
+  .addIndex(indices);
+
+
+// **********************************
+//	shader and mesh
+// **********************************
 
 const uniforms = {
-	color:[1.0, 1.0, 1.0],
-	time:0
-}
+  color: [1.0, 1.0, 1.0],
+  time: 0
+};
 
 const vs = require('./shaders/basic.vert')();
 const fs = require('./shaders/basic.frag')();
 
-//	shader
 const shader = new PIXI.Shader.from(vs, fs, uniforms);
-
-//	mesh
-const mesh = new PIXI.mesh.RawMesh(geometry, shader);
-
-stage.addChild(mesh);
-
-loop();
+const mesh = new PIXI.Mesh(geometry, shader);
 
 
-function loop() {
-	requestAnimationFrame(loop);
+// **********************************
+//	add mesh to the stage
+// **********************************
 
-	uniforms.time += 0.01;
-	renderer.render(stage);
-}
+app.stage.addChild(mesh);
 
-function resize() {
 
+// **********************************
+//	render loop
+// **********************************
+
+app.ticker.add(renderLoop);
+
+function renderLoop(delta) {
+  // update uniform value
+  uniforms.time += delta * 0.01;
 }

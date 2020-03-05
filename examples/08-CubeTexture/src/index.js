@@ -1,81 +1,104 @@
 import * as PIXI from 'pixi.js';
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4 } from 'gl-matrix';
 import OrbitalCameraControl from './OrbitalCameraControl';
 
-//	initialize pixi
-const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
-document.body.appendChild(renderer.view);
+const canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
 
-//	events
-document.body.addEventListener('resize', resize);
 
-//	stage
-const stage = new PIXI.Stage();
+// **********************************
+//	initialize PixiJS
+// **********************************
 
+const app = new PIXI.Application({
+  view: canvas,
+  resizeTo: canvas,
+  autoStart: true,
+  transparent: true,
+  antialias: true,
+  resolution: window.devicePixelRatio || 1,
+});
+
+
+// **********************************
 //	geometry
-let positions = [20,-20,20,20,20,20,-20,-20,20,20,20,20,-20,20,20,-20,-20,20,20,-20,-20,20,20,-20,20,-20,20,20,20,-20,20,20,20,20,-20,20,-20,-20,-20,-20,20,-20,20,-20,-20,-20,20,-20,20,20,-20,20,-20,-20,-20,-20,20,-20,20,20,-20,-20,-20,-20,20,20,-20,20,-20,-20,-20,-20,20,20,20,20,20,-20,-20,20,20,20,20,-20,-20,20,-20,-20,20,20,20,-20,-20,20,-20,20,-20,-20,-20,20,-20,20,-20,-20,20,-20,-20,-20];
-let indices = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35];
+// **********************************
 
-console.log(positions.length);
+const positions = [20, -20, 20, 20, 20, 20, -20, -20, 20, 20, 20, 20, -20, 20, 20, -20, -20, 20, 20, -20, -20, 20, 20, -20, 20, -20, 20, 20, 20, -20, 20, 20, 20, 20, -20, 20, -20, -20, -20, -20, 20, -20, 20, -20, -20, -20, 20, -20, 20, 20, -20, 20, -20, -20, -20, -20, 20, -20, 20, 20, -20, -20, -20, -20, 20, 20, -20, 20, -20, -20, -20, -20, 20, 20, 20, 20, 20, -20, -20, 20, 20, 20, 20, -20, -20, 20, -20, -20, 20, 20, 20, -20, -20, 20, -20, 20, -20, -20, -20, 20, -20, 20, -20, -20, 20, -20, -20, -20];
+const indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35];
 
-const geometry = 	new PIXI.mesh.Geometry()
-					.addAttribute('aVertexPosition', positions, 3)
-					.addIndex(indices);
+const geometry = new PIXI.Geometry()
+  .addAttribute('aVertexPosition', positions, 3)
+  .addIndex(indices);
 
+
+// **********************************
 //	camera
+// **********************************
+
 //	1. view matrix
 const view = mat4.create();
 const cameraControl = new OrbitalCameraControl(view, 0.1);
 
 //	2. projection matrix
 const proj = mat4.create();
-const rad = Math.PI/180;
-const ratio = window.innerWidth / window.innerHeight;
+const rad = Math.PI / 180;
+let ratio = app.screen.width / app.screen.height;
 mat4.perspective(proj, 45 * rad, ratio, .1, 100);
 
 
-//	texture
-console.log(PIXI.CubeTexture.from);
-const texture = PIXI.CubeTexture.from(
-	'assets/posx.jpg',
-	'assets/negx.jpg',
-	'assets/posy.jpg',
-	'assets/negy.jpg',
-	'assets/posz.jpg',
-	'assets/negz.jpg'
-	);
+// **********************************
+//	cube texture
+// **********************************
+
+const texture = PIXI.CubeTexture.from([
+  'assets/posx.jpg',
+  'assets/negx.jpg',
+  'assets/posy.jpg',
+  'assets/negy.jpg',
+  'assets/posz.jpg',
+  'assets/negz.jpg'
+]);
+
+
+// **********************************
+//	shader and mesh
+// **********************************
 
 const uniforms = {
-	texture,
-	view,
-	proj
-}
-
-
+  texture,
+  view,
+  proj
+};
 
 const vs = require('./shaders/basic.vert')();
 const fs = require('./shaders/basic.frag')();
 
-//	shader
 const shader = new PIXI.Shader.from(vs, fs, uniforms);
-
-//	mesh
-const mesh = new PIXI.mesh.RawMesh(geometry, shader);
+const mesh = new PIXI.Mesh(geometry, shader);
 mesh.state.depthTest = true;
 
-stage.addChild(mesh);
-
-loop();
+app.stage.addChild(mesh);
 
 
-function loop() {
-	requestAnimationFrame(loop);
+// **********************************
+//	render loop callback
+// **********************************
 
-	cameraControl.update();
+app.ticker.add(renderLoop);
 
-	renderer.render(stage);
+function renderLoop(delta) {
+  cameraControl.update();
 }
 
-function resize() {
 
+// **********************************
+//	events
+// **********************************
+
+window.addEventListener('resize', onResize);
+
+function onResize() {
+  ratio = app.screen.width / app.screen.height;
+  mat4.perspective(proj, 45 * rad, ratio, .1, 100);
 }

@@ -1,131 +1,164 @@
 import * as PIXI from 'pixi.js';
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4 } from 'gl-matrix';
 import OrbitalCameraControl from './OrbitalCameraControl';
 
-//	initialize pixi
-const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
-document.body.appendChild(renderer.view);
+const canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
 
-//	events
-document.body.addEventListener('resize', resize);
 
-//	stage
-const stage = new PIXI.Stage();
+// **********************************
+//	initialize PixiJS
+// **********************************
 
+const app = new PIXI.Application({
+  view: canvas,
+  resizeTo: canvas,
+  autoStart: true,
+  transparent: true,
+  antialias: true,
+  resolution: window.devicePixelRatio || 1,
+});
+
+
+// **********************************
 //	geometry
-let positions = [1,-1,1,1,1,1,-1,-1,1,1,1,1,-1,1,1,-1,-1,1,1,-1,-1,1,1,-1,1,-1,1,1,1,-1,1,1,1,1,-1,1,-1,-1,-1,-1,1,-1,1,-1,-1,-1,1,-1,1,1,-1,1,-1,-1,-1,-1,1,-1,1,1,-1,-1,-1,-1,1,1,-1,1,-1,-1,-1,-1,1,1,1,1,1,-1,-1,1,1,1,1,-1,-1,1,-1,-1,1,1,1,-1,-1,1,-1,1,-1,-1,-1,1,-1,1,-1,-1,1,-1,-1,-1];
-let indices = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35];
+// **********************************
 
-const geometry = 	new PIXI.mesh.Geometry()
-					.addAttribute('aVertexPosition', positions, 3)
-					.addIndex(indices);
+const positions = [1, -1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, -1, 1, 1, -1, -1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, 1, 1, 1, -1, 1, -1, -1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, -1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, 1, -1, -1, 1, -1, -1, -1];
+const indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35];
+
+const geometry = new PIXI.Geometry()
+  .addAttribute('aVertexPosition', positions, 3)
+  .addIndex(indices);
 
 const size = 3;
-const positionSquare = [
-	-size,  size, 0,
-	 size,  size, 0,
-	 size, -size, 0,
-	-size, -size, 0
-]					
-const uvsSquare = [
-	0, 1,
-	1, 1,
-	1, 0,
-	0, 0
-]
-const indicesSquare = [0, 1, 2, 0, 2, 3];
-const geometrySquare = new PIXI.mesh.Geometry()
-						.addAttribute('aVertexPosition', positionSquare, 3)
-						.addAttribute('aUV', uvsSquare, 2)
-						.addIndex(indicesSquare);
 
+const positionSquare = [
+  -size, size, 0,
+  size, size, 0,
+  size, -size, 0,
+  -size, -size, 0
+];
+
+const uvsSquare = [
+  0, 1,
+  1, 1,
+  1, 0,
+  0, 0
+];
+
+const indicesSquare = [0, 1, 2, 0, 2, 3];
+
+const geometrySquare = new PIXI.Geometry()
+  .addAttribute('aVertexPosition', positionSquare, 3)
+  .addAttribute('aUV', uvsSquare, 2)
+  .addIndex(indicesSquare);
+
+
+// **********************************
 //	camera
+// **********************************
+
 //	1. view matrix
 const view = mat4.create();
 const viewSquare = mat4.create();
-const cameraControl = new OrbitalCameraControl(view, .1);
+const cameraControl = new OrbitalCameraControl(view, 5);
 const cameraControlSquare = new OrbitalCameraControl(viewSquare, 10);
-
 
 //	2. projection matrix
 const proj = mat4.create();
-const rad = Math.PI/180;
-const ratio = window.innerWidth / window.innerHeight;
+const projSquare = mat4.create();
+const rad = Math.PI / 180;
+let ratio = app.screen.width / app.screen.height;
 mat4.perspective(proj, 45 * rad, ratio, .1, 100);
+mat4.perspective(projSquare, 45 * rad, 1, .1, 100);
 
 
-//	texture
-const texture = PIXI.CubeTexture.from(
-	'assets/posx.jpg',
-	'assets/negx.jpg',
-	'assets/posy.jpg',
-	'assets/negy.jpg',
-	'assets/posz.jpg',
-	'assets/negz.jpg'
-	);
+// **********************************
+//	cube texture
+// **********************************
 
-//	fbo
+const texture = PIXI.CubeTexture.from([
+  'assets/posx.jpg',
+  'assets/negx.jpg',
+  'assets/posy.jpg',
+  'assets/negy.jpg',
+  'assets/posz.jpg',
+  'assets/negz.jpg'
+]);
+
+
+// **********************************
+//	render texture and it's FBO
+// **********************************
+
 const fboSize = 512;
-const fbo = new PIXI.FrameBuffer(fboSize, fboSize)
-.addColorTexture(0)
-.addDepthTexture();
+const renderTexture = PIXI.RenderTexture.create({ width: fboSize, height: fboSize, scaleMode: PIXI.SCALE_MODES.LINEAR });
+renderTexture.baseTexture.clearColor = [0.2470, 0.3176, 0.7098, 1];
 
-fbo.colorTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
-fbo.colorTexture.scaleMode = PIXI.SCALE_MODES.LINEAR;
+const fbo = renderTexture.baseTexture.framebuffer;
+fbo.addDepthTexture();
 
+
+// **********************************
+//	shader and mesh
+// **********************************
 
 const uniforms = {
-	texture,
-	view,
-	proj
-}
-
-const uniformsSquare = {
-	texture:fbo.colorTexture,
-	view:viewSquare,
-	proj
-}
-
+  texture,
+  view,
+  proj
+};
 
 const vs = require('./shaders/basic.vert')();
 const fs = require('./shaders/basic.frag')();
 
+const shader = new PIXI.Shader.from(vs, fs, uniforms);
+const mesh = new PIXI.Mesh(geometry, shader);
+mesh.state.depthTest = true;
+
+
+const uniformsSquare = {
+  texture: fbo.colorTexture,
+  view: viewSquare,
+  proj: projSquare
+};
+
 const vsSquare = require('./shaders/square.vert')();
 const fsSquare = require('./shaders/square.frag')();
 
-
-//	shader
-const shader       = new PIXI.Shader.from(vs, fs, uniforms);
 const shaderSquare = new PIXI.Shader.from(vsSquare, fsSquare, uniformsSquare);
-
-//	mesh
-const mesh = new PIXI.mesh.RawMesh(geometry, shader);
-mesh.state.depthTest = true;
-const meshSquare = new PIXI.mesh.RawMesh(geometrySquare, shaderSquare);
+const meshSquare = new PIXI.Mesh(geometrySquare, shaderSquare);
 meshSquare.state.depthTest = true;
 
-// stage.addChild(mesh);
-stage.addChild(meshSquare);
-
-// console.log('framebuffer' , renderer.framebuffer);
-
-loop();
+app.stage.addChild(meshSquare);
 
 
-function loop() {
-	requestAnimationFrame(loop);
+// **********************************
+//	render loop callback
+// **********************************
 
-	cameraControl.update();
-	cameraControlSquare.update();
+app.ticker.add(renderLoop);
 
-	renderer.framebuffer.bind(fbo);
-	renderer.framebuffer.clear();
-	renderer.plugins.mesh.render(mesh);
+function renderLoop(delta) {
+  // render to framebuffer
+  app.renderer.render(mesh, renderTexture);
 
-	renderer.framebuffer.bind(null);
-	renderer.render(stage);
+  // render to screen
+  app.renderer.render(app.stage, null);
+
+  cameraControl.update();
+  cameraControlSquare.update();
 }
 
-function resize() {
 
+// **********************************
+//	events
+// **********************************
+
+window.addEventListener('resize', onResize);
+
+function onResize() {
+  ratio = app.screen.width / app.screen.height;
+  mat4.perspective(proj, 45 * rad, ratio, .1, 100);
 }
