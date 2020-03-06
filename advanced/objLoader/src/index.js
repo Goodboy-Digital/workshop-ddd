@@ -1,82 +1,113 @@
 import * as PIXI from 'pixi.js';
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4 } from 'gl-matrix';
 import OrbitalCameraControl from './OrbitalCameraControl';
-import objLoader from './loaders/objLoader';
-import objParser from './loaders/objParser';
+import ObjLoader from './loaders/objLoader';
 
-//	initialize pixi
-const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
-document.body.appendChild(renderer.view);
-
-window.renderer = renderer
-
-//	events
-document.body.addEventListener('resize', resize);
-
-//	stage
-const stage = new PIXI.Stage();
-
-//	camera
-//	1. view matrix
-const view = mat4.create();
-const cameraControl = new OrbitalCameraControl(view, 25);
-
-//	2. projection matrix
-const proj = mat4.create();
-const rad = Math.PI/180;
-const ratio = window.innerWidth / window.innerHeight;
-mat4.perspective(proj, 45 * rad, ratio, .1, 100);
+const canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
 
 
-//	texture
-const texture = PIXI.Texture.from('./assets/ao-car.jpg');
+// **********************************
+//	initialize PixiJS
+// **********************************
 
-const uniforms = {
-	texture,
-	view,
-	proj,
-	time:0
-}
-
-
-
-const vs = require('./shaders/basic.vert')();
-const fs = require('./shaders/basic.frag')();
-
-//	shader
-const shader = new PIXI.Shader.from(vs, fs, uniforms);
-
-//	geometry
-const loader = new PIXI.loaders.Loader();
-// console.log('Loader :', loader);
-loader.use(objLoader())
-loader.add(['./assets/car.obj']);
-loader.load(()=>{
-	console.log('Loaded');
-	const geometry = PIXI.mesh.Geometry.from('./assets/car.obj');
-
-	//	mesh
-	const mesh = new PIXI.mesh.RawMesh(geometry, shader);
-	mesh.state.depthTest = true;
-
-	console.table(geometry.attributes);
-	console.log(geometry);
-
-	stage.addChild(mesh);
-
-	loop();
+const app = new PIXI.Application({
+  view: canvas,
+  resizeTo: canvas,
+  autoStart: true,
+  transparent: true,
+  antialias: true,
+  resolution: window.devicePixelRatio || 1,
 });
 
 
-function loop() {
-	shader.uniforms.time += 0.005;
-	requestAnimationFrame(loop);
+// **********************************
+//	camera
+// **********************************
 
-	cameraControl.update();
+const camera = {
+  viewMatrix: mat4.create(),
+  projMatrix: mat4.create(),
+  fov: 45 * Math.PI / 180,
+  aspect: app.screen.width / app.screen.height, // update aspect ratio value when window resized
+  near: 0.1,
+  far: 100,
+};
 
-	renderer.render(stage);
+mat4.perspective(camera.projMatrix, camera.fov, camera.aspect, camera.near, camera.far);
+const cameraControl = new OrbitalCameraControl(camera.viewMatrix, 25);
+
+
+// **********************************
+//	shader
+//  use empty texture before loading
+// **********************************
+
+const uniforms = {
+  texture: PIXI.Texture.EMPTY,
+  view: camera.viewMatrix,
+  proj: camera.projMatrix,
+  time: 0
+};
+const vs = require('./shaders/basic.vert')();
+const fs = require('./shaders/basic.frag')();
+const shader = new PIXI.Shader.from(vs, fs, uniforms);
+
+
+// **********************************
+//	assets loader 
+// **********************************
+
+const objLod = new ObjLoader(PIXI);
+app.loader
+  .use(objLod.useHook())
+  .add('carGeometry', './assets/car.obj')
+  .add('carTexture', './assets/ao-car.jpg')
+  .load(assetsLoaded);
+
+
+// **********************************
+//	loader callback
+// **********************************
+
+function assetsLoaded(loader, resources) {
+  console.log('Loaded');
+  console.table(resources.carGeometry.geometry.attributes);
+  console.log(resources.carTexture.texture);
+  console.log('=======================');
+
+  //  1. set texture to uniform
+  shader.uniforms.texture = resources.carTexture.texture;
+
+  //	2. create mesh
+  const mesh = new PIXI.Mesh(resources.carGeometry.geometry, shader);
+  mesh.state.depthTest = true;
+
+  //  3. add mesh to the stage
+  app.stage.addChild(mesh);
+
+  //  4. start render loop
+  app.ticker.add(renderLoop);
 }
 
-function resize() {
 
+// **********************************
+//	render loop callback
+// **********************************
+
+function renderLoop() {
+  shader.uniforms.time += app.ticker.deltaMS;
+  cameraControl.update();
+}
+
+
+// **********************************
+//	events
+// **********************************
+
+window.addEventListener('resize', onResize);
+
+function onResize() {
+  camera.aspect = app.screen.width / app.screen.height;
+  mat4.perspective(camera.projMatrix, camera.fov, camera.aspect, camera.near, camera.far);
 }

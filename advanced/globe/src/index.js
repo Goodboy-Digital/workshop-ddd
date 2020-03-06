@@ -1,121 +1,212 @@
 import * as PIXI from 'pixi.js';
-import { mat4, vec3 } from 'gl-matrix';
+import { mat4, vec3, quat } from 'gl-matrix';
 import OrbitalCameraControl from './OrbitalCameraControl';
 import Sphere from './Sphere';
 
-//	initialize pixi
-const renderer = PIXI.autoDetectRenderer(window.innerWidth, window.innerHeight, {transparent:true, antialias:true});
-document.body.appendChild(renderer.view);
+const canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
 
-console.log(renderer.clearColor);
-window.renderer = renderer
 
-//	events
-document.body.addEventListener('resize', resize);
+// **********************************
+//	initialize PixiJS
+// **********************************
 
-//	stage
-const stage = new PIXI.Stage();
+const app = new PIXI.Application({
+  view: canvas,
+  resizeTo: canvas,
+  autoStart: true,
+  transparent: true,
+  antialias: true,
+  resolution: window.devicePixelRatio || 1,
+});
 
-//	geometry
-const { positions, uvs, indices } = Sphere;
-const geometry = 	new PIXI.mesh.Geometry()
-					.addAttribute('aVertexPosition', positions, 3)
-					.addAttribute('aUV', uvs, 2)
-					.addIndex(indices);
 
+// **********************************
 //	camera
-//	1. view matrix
-const view = mat4.create();
-const cameraControl = new OrbitalCameraControl(view, 50);
+// **********************************
 
-//	2. projection matrix
-const proj = mat4.create();
-const rad = Math.PI/180;
-const ratio = window.innerWidth / window.innerHeight;
-mat4.perspective(proj, 45 * rad, ratio, .1, 100);
+const camera = {
+  viewMatrix: mat4.create(),
+  projMatrix: mat4.create(),
+  fov: 45 * Math.PI / 180,
+  aspect: app.screen.width / app.screen.height, // update aspect ratio value when window resized
+  near: 0.1,
+  far: 100,
+};
+
+mat4.perspective(camera.projMatrix, camera.fov, camera.aspect, camera.near, camera.far);
+const cameraControl = new OrbitalCameraControl(camera.viewMatrix, 50);
 
 
+// **********************************
+//	geometry
+// **********************************
+
+const { positions, uvs, indices } = Sphere;
+const geometry = new PIXI.Geometry()
+  .addAttribute('aVertexPosition', positions, 3)
+  .addAttribute('aTextureCoord', uvs, 2)
+  .addIndex(indices);
+
+
+// **********************************
+//	tag position
+// **********************************
+
+const tagX = Math.cos(Math.PI / 2) * 10;
+const tagZ = Math.sin(Math.PI / 2) * 10 + 2;
+const tagPos = vec3.fromValues(tagX, 0, tagZ);
+
+
+// **********************************
 //	texture
-const texture = PIXI.Texture.from('assets/earth.jpg');
+// **********************************
 
-const screenPos = vec3.create();
-const a = Math.PI/2;
-const x = Math.cos(a) * 10;
-const z = Math.sin(a) * 10;
-const tagPos = vec3.fromValues(x, 0, z);
+const textureEarth = PIXI.Texture.from('./assets/earth.jpg');
 
-const uniforms = {
-	texture,
-	view,
-	proj,
-	uScale:10,
-	uPosition:[0, 0, 0],
-	time:0
+
+// **********************************
+//	shader and mesh
+//  for earth and dot
+// **********************************
+
+// earth
+const uniformsEarth = {
+  texture: textureEarth,
+  view: camera.viewMatrix,
+  proj: camera.projMatrix,
+  uScale: 10,
+  uPosition: [0, 0, 0],
+  time: 0
 }
 
-const uniformsColor = {
-	view, 
-	proj,
-	uScale:1,
-	color:[1, 1, 1],
-	uPosition:tagPos,
-	opacity:1
+const vsBasic = require('./shaders/basic.vert')();
+const fsEarth = require('./shaders/earth.frag')();
+
+const shaderEarth = PIXI.Shader.from(vsBasic, fsEarth, uniformsEarth);
+const meshEarth = new PIXI.Mesh(geometry, shaderEarth);
+meshEarth.state.depthTest = true;
+
+// dot
+const uniformsDot = {
+  view: camera.viewMatrix,
+  proj: camera.projMatrix,
+  uScale: 0.6,
+  color: [0, 0.5, 1],
+  uPosition: tagPos,
+  opacity: 1
 }
 
-const vs = require('./shaders/basic.vert')();
-const fs = require('./shaders/basic.frag')();
-const fsColor = require('./shaders/color.frag')();
+const fsDot = require('./shaders/dot.frag')();
 
-//	shader
-const shader = PIXI.Shader.from(vs, fs, uniforms);
-
-//	shader color
-const shaderColor = PIXI.Shader.from(vs, fsColor, uniformsColor);
-
-//	mesh
-const mesh = new PIXI.mesh.RawMesh(geometry, shader);
-mesh.state.depthTest = true;
-
-const meshDot = new PIXI.mesh.RawMesh(geometry, shaderColor);
-mesh.state.depthTest = true;
-
-stage.addChild(mesh);
-// stage.addChild(meshDot);
+const shaderDot = PIXI.Shader.from(vsBasic, fsDot, uniformsDot);
+const meshDot = new PIXI.Mesh(geometry, shaderDot);
+meshDot.state.depthTest = true;
 
 
-//	2D container
+// **********************************
+//	mesh from sprite
+// **********************************
+
+const background = new PIXI.Graphics()
+  .beginFill(0xFF6600)
+  .drawRoundedRect(0, 0, 170, 35, 10);
+
+const text = new PIXI.Text('Hello world!', {
+  fontFamily: 'Tahoma, sans-serif',
+  fontSize: 24,
+  fill: 0xffffff
+});
+text.x = 25;
+text.y = 3;
+
 const container2D = new PIXI.Container();
-stage.addChild(container2D);
+container2D.addChild(background, text);
 
-const g = new PIXI.Graphics();
-g.beginFill(0xFF6600);
-g.drawRect(0, 0, 100, 25);
-container2D.addChild(g);
+const sprite2D = new PIXI.Sprite(app.renderer.generateTexture(container2D));
+sprite2D.anchor.set(0.0, 0.5);
 
+const rotateMatrix = mat4.create();
 
-
-
-loop();
-
-window.addEventListener('resize', resize);
-
-function loop() {
-	vec3.transformMat4(screenPos, tagPos, view);
-	vec3.transformMat4(screenPos, screenPos, proj);
-	g.x = window.innerWidth * ((screenPos[0] + 1) /2);
-	g.y = window.innerWidth - window.innerWidth * ((screenPos[1] + 1) /2);
-
-
-	shader.uniforms.time += 0.005;
-	requestAnimationFrame(loop);
-
-	cameraControl.update();
-
-	renderer.render(stage);
+const uniformsPlane = {
+  view: camera.viewMatrix,
+  proj: camera.projMatrix,
+  uScale: 0.03,
+  uPosition: tagPos,
+  uRotate: rotateMatrix,
 }
 
-function resize() {
-	renderer.resize(window.innerWidth, window.innerHeight);
-	const ratio = window.innerWidth / window.innerHeight;
-	mat4.perspective(proj, 45 * rad, ratio, .1, 100);
+const vsPlane = require('./shaders/plane.vert')();
+const fsPlane = require('./shaders/plane.frag')();
+
+const meshPlane = mesh3DfromSprite(sprite2D, vsPlane, fsPlane, uniformsPlane);
+
+
+// **********************************
+//	helper functions
+// **********************************
+
+function mesh3DfromSprite(sprite, vs, fs, uniforms = {}) {
+  sprite.calculateVertices();
+
+  const geometry = new PIXI.Geometry()
+    .addAttribute('aVertexPosition', sprite.vertexData, 2)
+    .addAttribute('aTextureCoord', sprite.uvs, 2)
+    .addIndex(sprite.indices);
+
+  uniforms.texture = sprite.texture;
+  const shader = PIXI.Shader.from(vs, fs, uniforms);
+  const mesh = new PIXI.Mesh(geometry, shader);
+
+  return mesh;
+}
+
+// wrap radians to (-PI; PI) range
+function wrapRadians(a) {
+  const PI2 = Math.PI * 2;
+  return a > 0 ?
+    (a + Math.PI) % PI2 - Math.PI :
+    (a - Math.PI) % PI2 + Math.PI;
+}
+
+
+// **********************************
+//	add meshes to the stage
+// **********************************
+
+app.stage.addChild(meshEarth, meshPlane, meshDot);
+
+
+// **********************************
+//	render loop callback
+// **********************************
+
+app.ticker.add(renderLoop);
+
+function renderLoop(delta) {
+  cameraControl.update();
+  let { rx, ry, quat } = cameraControl.getRotation();
+  mat4.fromQuat(rotateMatrix, quat);
+
+  ry = wrapRadians(ry) / Math.PI * 180;
+
+  if (ry < 115 && ry > -115) {
+    meshPlane.state.depthTest = false;
+  } else {
+    meshPlane.state.depthTest = true;
+  }
+
+  shaderEarth.uniforms.time += delta * 0.005;
+}
+
+
+// **********************************
+//	events
+// **********************************
+
+window.addEventListener('resize', onResize);
+
+function onResize() {
+  camera.aspect = app.screen.width / app.screen.height;
+  mat4.perspective(camera.projMatrix, camera.fov, camera.aspect, camera.near, camera.far);
 }

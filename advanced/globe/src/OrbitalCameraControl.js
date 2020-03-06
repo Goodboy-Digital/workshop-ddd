@@ -166,6 +166,13 @@ class OrbitalCameraControl {
 		}
 	}
 
+	getRotation() {
+		return {
+			rx: this._rx,
+			ry: this._ry,
+			quat: this._quat
+		}
+	}
 }
 
 
